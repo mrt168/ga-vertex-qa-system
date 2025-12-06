@@ -59,7 +59,8 @@ export class GoogleDriveSource {
       scopes: ['https://www.googleapis.com/auth/drive.readonly'],
     });
 
-    this.drive = google.drive({ version: 'v3', auth });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.drive = google.drive({ version: 'v3', auth: auth as any });
     return this.drive;
   }
 
