@@ -112,7 +112,7 @@ export class EvolutionWorkflow {
     const targets: EvolutionTarget[] = [];
     const driveSource = getGoogleDriveSource();
 
-    for (const [docId, docFeedbacks] of feedbackByDocument) {
+    for (const [docId, docFeedbacks] of Array.from(feedbackByDocument)) {
       if (docFeedbacks.length >= this.config.badFeedbackThreshold) {
         // ドキュメント情報を取得
         const { data: doc } = await supabase
