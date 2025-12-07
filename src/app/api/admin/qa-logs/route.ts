@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 
@@ -30,8 +30,18 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
     const rating = searchParams.get('rating'); // 'GOOD', 'BAD', or null for all
 
+    // Use service role client for data fetching (bypasses RLS)
+    // Falls back to regular client if service role key is not set
+    let adminClient;
+    try {
+      adminClient = createServiceRoleClient();
+    } catch (e) {
+      console.warn('Service role key not set, falling back to regular client. Admin will only see their own sessions.');
+      adminClient = supabase;
+    }
+
     // Get sessions with their messages
-    const { data: sessions, error: sessionsError } = await supabase
+    const { data: sessions, error: sessionsError } = await adminClient
       .from('qa_sessions')
       .select(`
         id,
@@ -55,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get feedbacks with optional rating filter
-    let feedbackQuery = supabase
+    let feedbackQuery = adminClient
       .from('qa_feedback_logs')
       .select('*')
       .order('created_at', { ascending: false });
@@ -131,7 +141,7 @@ export async function GET(request: NextRequest) {
     qaPairs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     // Get total count for pagination
-    const { count: totalSessions } = await supabase
+    const { count: totalSessions } = await adminClient
       .from('qa_sessions')
       .select('*', { count: 'exact', head: true });
 
