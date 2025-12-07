@@ -1,6 +1,6 @@
 /**
  * Vertex AI Gemini Client
- * Uses ADC (Application Default Credentials) for authentication
+ * Uses ADC (Application Default Credentials) or explicit service account for authentication
  */
 
 import { VertexAI, GenerativeModel } from '@google-cloud/vertexai';
@@ -22,10 +22,36 @@ export class VertexGeminiClient {
     const projectId = process.env.GCP_PROJECT_ID || 'convini-project';
     const location = process.env.VERTEX_LOCATION || 'us-central1';
 
-    this.vertexAI = new VertexAI({
-      project: projectId,
-      location: location,
-    });
+    // Support both ADC and explicit service account JSON from environment variable
+    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+
+    if (serviceAccountJson) {
+      // Use service account credentials from environment variable (for Vercel)
+      try {
+        const credentials = JSON.parse(serviceAccountJson);
+        this.vertexAI = new VertexAI({
+          project: projectId,
+          location: location,
+          googleAuthOptions: {
+            credentials,
+            scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+          },
+        });
+      } catch (e) {
+        console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON for VertexAI:', e);
+        // Fallback to default ADC
+        this.vertexAI = new VertexAI({
+          project: projectId,
+          location: location,
+        });
+      }
+    } else {
+      // Use default Application Default Credentials
+      this.vertexAI = new VertexAI({
+        project: projectId,
+        location: location,
+      });
+    }
 
     this.model = this.vertexAI.getGenerativeModel({
       model: GEMINI_MODEL,

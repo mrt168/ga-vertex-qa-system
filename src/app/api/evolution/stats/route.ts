@@ -28,25 +28,25 @@ export async function GET(request: NextRequest) {
 
     // 未処理の低評価フィードバック数
     const { count: pendingBadFeedbackCount } = await supabase
-      .from('qaev_feedback_logs')
+      .from('qa_feedback_logs')
       .select('*', { count: 'exact', head: true })
       .eq('rating', 'BAD')
       .eq('processed', false);
 
     // 全フィードバック数
     const { count: totalFeedbackCount } = await supabase
-      .from('qaev_feedback_logs')
+      .from('qa_feedback_logs')
       .select('*', { count: 'exact', head: true });
 
     // 良い評価の数
     const { count: goodFeedbackCount } = await supabase
-      .from('qaev_feedback_logs')
+      .from('qa_feedback_logs')
       .select('*', { count: 'exact', head: true })
       .eq('rating', 'GOOD');
 
     // 低評価でグループ化してドキュメント数を確認
     const { data: feedbackByDoc } = await supabase
-      .from('qaev_feedback_logs')
+      .from('qa_feedback_logs')
       .select('document_id')
       .eq('rating', 'BAD')
       .eq('processed', false);
@@ -67,18 +67,18 @@ export async function GET(request: NextRequest) {
 
     // 進化履歴数
     const { count: evolutionCount } = await supabase
-      .from('qaev_evolution_history')
+      .from('qa_evolution_history')
       .select('*', { count: 'exact', head: true });
 
     // 成功した進化（勝者あり）
     const { count: successfulEvolutions } = await supabase
-      .from('qaev_evolution_history')
+      .from('qa_evolution_history')
       .select('*', { count: 'exact', head: true })
       .not('win_rate', 'is', null);
 
     // ドキュメント数
     const { count: documentCount } = await supabase
-      .from('qaev_documents')
+      .from('qa_documents')
       .select('*', { count: 'exact', head: true });
 
     return NextResponse.json({

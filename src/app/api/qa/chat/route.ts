@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     // Verify session belongs to user
     const { data: session, error: sessionError } = await supabase
-      .from('qaev_sessions')
+      .from('qa_sessions')
       .select('id')
       .eq('id', sessionId)
       .eq('user_id', user.id)
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     // Save user message
     const { data: userMessage, error: userMsgError } = await supabase
-      .from('qaev_messages')
+      .from('qa_messages')
       .insert({
         session_id: sessionId,
         role: 'user',
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
 
     // Save assistant message
     const { data: assistantMessage, error: assistantMsgError } = await supabase
-      .from('qaev_messages')
+      .from('qa_messages')
       .insert({
         session_id: sessionId,
         role: 'assistant',
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     // Update session title if this is the first message
     const { count } = await supabase
-      .from('qaev_messages')
+      .from('qa_messages')
       .select('*', { count: 'exact', head: true })
       .eq('session_id', sessionId);
 
@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
       });
 
       await supabase
-        .from('qaev_sessions')
+        .from('qa_sessions')
         .update({ title: title.slice(0, 50) })
         .eq('id', sessionId);
     }
@@ -241,7 +241,7 @@ async function searchDocuments(
           try {
             // Check if this document is in our database
             const { data: doc } = await supabase
-              .from('qaev_documents')
+              .from('qa_documents')
               .select('file_name, drive_file_id')
               .eq('drive_file_id', result.documentId)
               .single();
@@ -283,7 +283,7 @@ async function searchDocuments(
     for (const source of sources) {
       if (source.documentId) {
         await supabase
-          .from('qaev_documents')
+          .from('qa_documents')
           .update({ last_accessed_at: new Date().toISOString() })
           .eq('drive_file_id', source.documentId);
       }
@@ -304,7 +304,7 @@ async function fallbackDatabaseSearch(
 ): Promise<Source[]> {
   // Fallback: Basic keyword search in document names
   const { data: documents, error } = await supabase
-    .from('qaev_documents')
+    .from('qa_documents')
     .select('id, file_name, drive_file_id, content_hash')
     .textSearch('file_name', query, { type: 'websearch' })
     .limit(5);
@@ -312,7 +312,7 @@ async function fallbackDatabaseSearch(
   if (error || !documents || documents.length === 0) {
     // Try simpler ILIKE search
     const { data: ilikeDocs } = await supabase
-      .from('qaev_documents')
+      .from('qa_documents')
       .select('id, file_name, drive_file_id')
       .ilike('file_name', `%${query.split(' ')[0]}%`)
       .limit(5);

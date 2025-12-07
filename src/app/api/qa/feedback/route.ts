@@ -41,12 +41,12 @@ export async function POST(request: NextRequest) {
 
     // Get the message with its session to verify ownership
     const { data: message, error: msgError } = await supabase
-      .from('qaev_messages')
+      .from('qa_messages')
       .select(`
         id,
         content,
         session_id,
-        qaev_sessions!inner (
+        qa_sessions!inner (
           user_id
         )
       `)
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify the session belongs to the user
-    const sessionData = message.qaev_sessions as unknown as { user_id: string };
+    const sessionData = message.qa_sessions as unknown as { user_id: string };
     if (sessionData.user_id !== user.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     // Get the user's question (previous message in session)
     const { data: userMessages } = await supabase
-      .from('qaev_messages')
+      .from('qa_messages')
       .select('content')
       .eq('session_id', message.session_id)
       .eq('role', 'user')
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     // Check if feedback already exists for this message
     const { data: existingFeedback } = await supabase
-      .from('qaev_feedback_logs')
+      .from('qa_feedback_logs')
       .select('id')
       .eq('message_id', messageId)
       .single();
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     if (existingFeedback) {
       // Update existing feedback
       const { data: feedback, error: updateError } = await supabase
-        .from('qaev_feedback_logs')
+        .from('qa_feedback_logs')
         .update({
           rating,
           feedback_text: feedbackText || null,
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
 
     // Create new feedback
     const { data: feedback, error: insertError } = await supabase
-      .from('qaev_feedback_logs')
+      .from('qa_feedback_logs')
       .insert({
         user_id: user.id,
         message_id: messageId,
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
 
     // Update message with feedback_id
     await supabase
-      .from('qaev_messages')
+      .from('qa_messages')
       .update({ feedback_id: feedback.id })
       .eq('id', messageId);
 
@@ -163,7 +163,7 @@ async function checkEvolutionTrigger(
 
   // Count unprocessed BAD feedback for this document
   const { count } = await supabase
-    .from('qaev_feedback_logs')
+    .from('qa_feedback_logs')
     .select('*', { count: 'exact', head: true })
     .eq('document_id', documentId)
     .eq('rating', 'BAD')
@@ -176,7 +176,7 @@ async function checkEvolutionTrigger(
 
     // For now, just mark feedbacks as processed
     await supabase
-      .from('qaev_feedback_logs')
+      .from('qa_feedback_logs')
       .update({ processed: true })
       .eq('document_id', documentId)
       .eq('rating', 'BAD')
@@ -184,7 +184,7 @@ async function checkEvolutionTrigger(
 
     // Update document bad count
     await supabase
-      .from('qaev_documents')
+      .from('qa_documents')
       .update({
         total_bad_count: count,
       })

@@ -77,7 +77,7 @@ export class EvolutionWorkflow {
   ): Promise<EvolutionTarget[]> {
     // 未処理の低評価フィードバックを取得
     const { data: feedbacks, error } = await supabase
-      .from('qaev_feedback_logs')
+      .from('qa_feedback_logs')
       .select('*')
       .eq('rating', 'BAD')
       .eq('processed', false)
@@ -116,7 +116,7 @@ export class EvolutionWorkflow {
       if (docFeedbacks.length >= this.config.badFeedbackThreshold) {
         // ドキュメント情報を取得
         const { data: doc } = await supabase
-          .from('qaev_documents')
+          .from('qa_documents')
           .select('*')
           .eq('id', docId)
           .single();
@@ -229,7 +229,7 @@ export class EvolutionWorkflow {
 
     // 過去の良い評価の質問も追加
     const { data: goodFeedbacks } = await supabase
-      .from('qaev_feedback_logs')
+      .from('qa_feedback_logs')
       .select('user_query')
       .eq('document_id', target.documentId)
       .eq('rating', 'GOOD')
@@ -282,7 +282,7 @@ export class EvolutionWorkflow {
 
     // ドキュメントのgenerationを更新
     await supabase
-      .from('qaev_documents')
+      .from('qa_documents')
       .update({
         generation: target.currentGeneration + 1,
         updated_at: new Date().toISOString(),
@@ -299,7 +299,7 @@ export class EvolutionWorkflow {
   ): Promise<void> {
     const feedbackIds = feedbacks.map((f) => f.feedbackId);
 
-    await supabase.from('qaev_feedback_logs').update({ processed: true }).in('id', feedbackIds);
+    await supabase.from('qa_feedback_logs').update({ processed: true }).in('id', feedbackIds);
   }
 
   /**
@@ -316,7 +316,7 @@ export class EvolutionWorkflow {
       ? candidates.find((c) => c.id === winner.candidateId)
       : null;
 
-    await supabase.from('qaev_evolution_history').insert({
+    await supabase.from('qa_evolution_history').insert({
       document_id: target.documentId,
       generation: target.currentGeneration + 1,
       mutation_type: winnerCandidate?.mutationType || 'NONE',
@@ -336,7 +336,7 @@ export class EvolutionWorkflow {
 
     // ドキュメント情報を取得
     const { data: doc, error: docError } = await supabase
-      .from('qaev_documents')
+      .from('qa_documents')
       .select('*')
       .eq('id', documentId)
       .single();
@@ -347,7 +347,7 @@ export class EvolutionWorkflow {
 
     // フィードバックを取得（処理済みも含む）
     const { data: feedbacks } = await supabase
-      .from('qaev_feedback_logs')
+      .from('qa_feedback_logs')
       .select('*')
       .eq('document_id', documentId)
       .eq('rating', 'BAD')

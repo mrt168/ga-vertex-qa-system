@@ -30,11 +30,11 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
 
     let query = supabase
-      .from('qaev_evolution_history')
+      .from('qa_evolution_history')
       .select(
         `
         *,
-        document:qaev_documents(id, file_name)
+        document:qa_documents(id, file_name)
       `
       )
       .order('created_at', { ascending: false })

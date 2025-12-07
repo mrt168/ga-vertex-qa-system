@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { QaevSession } from '@/types/database';
-import { Plus, Trash2, MessageSquare } from 'lucide-react';
+import { Plus, Trash2, MessageSquare, Settings } from 'lucide-react';
 
 interface SessionSidebarProps {
   sessions: QaevSession[];
@@ -82,6 +83,17 @@ export function SessionSidebar({
             ))}
           </ul>
         )}
+      </div>
+
+      {/* Footer with Admin link */}
+      <div className="border-t border-gray-200 p-4 dark:border-gray-700">
+        <Link
+          href="/admin"
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800"
+        >
+          <Settings className="h-4 w-4" />
+          <span>Admin Dashboard</span>
+        </Link>
       </div>
     </div>
   );

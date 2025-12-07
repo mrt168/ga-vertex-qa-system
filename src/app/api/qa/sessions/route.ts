@@ -17,7 +17,7 @@ export async function GET() {
     }
 
     const { data: sessions, error } = await supabase
-      .from('qaev_sessions')
+      .from('qa_sessions')
       .select('*')
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false });
@@ -54,7 +54,7 @@ export async function POST() {
     }
 
     const { data: session, error } = await supabase
-      .from('qaev_sessions')
+      .from('qa_sessions')
       .insert({
         user_id: user.id,
         title: null, // Will be set after first message

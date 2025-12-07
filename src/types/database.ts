@@ -3,7 +3,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
-      qaev_documents: {
+      qa_documents: {
         Row: {
           id: string;
           drive_file_id: string;
@@ -41,7 +41,7 @@ export interface Database {
           updated_at?: string;
         };
       };
-      qaev_sessions: {
+      qa_sessions: {
         Row: {
           id: string;
           user_id: string;
@@ -64,7 +64,7 @@ export interface Database {
           updated_at?: string;
         };
       };
-      qaev_messages: {
+      qa_messages: {
         Row: {
           id: string;
           session_id: string;
@@ -93,7 +93,7 @@ export interface Database {
           created_at?: string;
         };
       };
-      qaev_feedback_logs: {
+      qa_feedback_logs: {
         Row: {
           id: string;
           document_id: string | null;
@@ -131,7 +131,7 @@ export interface Database {
           created_at?: string;
         };
       };
-      qaev_evolution_history: {
+      qa_evolution_history: {
         Row: {
           id: string;
           document_id: string;
@@ -174,14 +174,14 @@ export interface Database {
 }
 
 // Helper types for easier usage
-export type QaevDocument = Database['public']['Tables']['qaev_documents']['Row'];
-export type QaevSession = Database['public']['Tables']['qaev_sessions']['Row'];
-export type QaevMessage = Database['public']['Tables']['qaev_messages']['Row'];
-export type QaevFeedbackLog = Database['public']['Tables']['qaev_feedback_logs']['Row'];
-export type QaevEvolutionHistory = Database['public']['Tables']['qaev_evolution_history']['Row'];
+export type QaevDocument = Database['public']['Tables']['qa_documents']['Row'];
+export type QaevSession = Database['public']['Tables']['qa_sessions']['Row'];
+export type QaevMessage = Database['public']['Tables']['qa_messages']['Row'];
+export type QaevFeedbackLog = Database['public']['Tables']['qa_feedback_logs']['Row'];
+export type QaevEvolutionHistory = Database['public']['Tables']['qa_evolution_history']['Row'];
 
-export type InsertQaevDocument = Database['public']['Tables']['qaev_documents']['Insert'];
-export type InsertQaevSession = Database['public']['Tables']['qaev_sessions']['Insert'];
-export type InsertQaevMessage = Database['public']['Tables']['qaev_messages']['Insert'];
-export type InsertQaevFeedbackLog = Database['public']['Tables']['qaev_feedback_logs']['Insert'];
-export type InsertQaevEvolutionHistory = Database['public']['Tables']['qaev_evolution_history']['Insert'];
+export type InsertQaevDocument = Database['public']['Tables']['qa_documents']['Insert'];
+export type InsertQaevSession = Database['public']['Tables']['qa_sessions']['Insert'];
+export type InsertQaevMessage = Database['public']['Tables']['qa_messages']['Insert'];
+export type InsertQaevFeedbackLog = Database['public']['Tables']['qa_feedback_logs']['Insert'];
+export type InsertQaevEvolutionHistory = Database['public']['Tables']['qa_evolution_history']['Insert'];

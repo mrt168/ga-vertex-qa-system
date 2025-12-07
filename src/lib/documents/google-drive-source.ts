@@ -55,10 +55,27 @@ export class GoogleDriveSource {
       return this.drive;
     }
 
-    const auth = new GoogleAuth({
-      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
-    });
+    // Support both ADC and explicit service account JSON from environment variable
+    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 
+    let authOptions: ConstructorParameters<typeof GoogleAuth>[0] = {
+      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+    };
+
+    if (serviceAccountJson) {
+      // Use service account credentials from environment variable (for Vercel)
+      try {
+        const credentials = JSON.parse(serviceAccountJson);
+        authOptions = {
+          ...authOptions,
+          credentials,
+        };
+      } catch (e) {
+        console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', e);
+      }
+    }
+
+    const auth = new GoogleAuth(authOptions);
     this.drive = google.drive({ version: 'v3', auth: auth as unknown as drive_v3.Options['auth'] });
     return this.drive;
   }

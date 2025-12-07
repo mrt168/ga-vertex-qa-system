@@ -20,16 +20,30 @@ export class GoogleDriveClient {
   private drive: drive_v3.Drive;
 
   constructor() {
-    // Use Application Default Credentials (ADC)
-    // For local development: run `gcloud auth application-default login`
-    // For production: use service account or workload identity
-    const auth = new GoogleAuth({
+    // Support both ADC and explicit service account JSON from environment variable
+    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+
+    let authOptions: ConstructorParameters<typeof GoogleAuth>[0] = {
       scopes: [
         'https://www.googleapis.com/auth/drive.readonly',
         'https://www.googleapis.com/auth/cloud-platform',
       ],
-    });
+    };
 
+    if (serviceAccountJson) {
+      // Use service account credentials from environment variable (for Vercel)
+      try {
+        const credentials = JSON.parse(serviceAccountJson);
+        authOptions = {
+          ...authOptions,
+          credentials,
+        };
+      } catch (e) {
+        console.error('Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', e);
+      }
+    }
+
+    const auth = new GoogleAuth(authOptions);
     this.drive = google.drive({ version: 'v3', auth: auth as unknown as drive_v3.Options['auth'] });
   }
 
