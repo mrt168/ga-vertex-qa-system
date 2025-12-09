@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Get session
     const { data: session, error: sessionError } = await supabase
-      .from('qa_sessions')
+      .from('qaev_sessions')
       .select('*')
       .eq('id', sessionId)
       .eq('user_id', user.id)
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     // Get messages
     const { data: messages, error: messagesError } = await supabase
-      .from('qa_messages')
+      .from('qaev_messages')
       .select('*')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true });
@@ -82,7 +82,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Verify session belongs to user and delete
     const { error } = await supabase
-      .from('qa_sessions')
+      .from('qaev_sessions')
       .delete()
       .eq('id', sessionId)
       .eq('user_id', user.id);
@@ -130,7 +130,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     const { data: session, error } = await supabase
-      .from('qa_sessions')
+      .from('qaev_sessions')
       .update({ title: title.slice(0, 100) })
       .eq('id', sessionId)
       .eq('user_id', user.id)

@@ -30,11 +30,11 @@ export async function GET(request: NextRequest) {
 
     // 進化履歴から最新の候補を取得
     let query = supabase
-      .from('qa_evolution_history')
+      .from('qaev_evolution_history')
       .select(
         `
         *,
-        document:qa_documents(id, file_name, drive_file_id)
+        document:qaev_documents(id, file_name, drive_file_id)
       `
       )
       .order('created_at', { ascending: false })

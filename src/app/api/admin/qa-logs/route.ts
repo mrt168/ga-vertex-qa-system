@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     // Get sessions first (without JOIN to avoid foreign key issues)
     const { data: sessions, error: sessionsError } = await adminClient
-      .from('qa_sessions')
+      .from('qaev_sessions')
       .select('id, title, created_at, updated_at')
       .order('updated_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     if (sessionIds.length > 0) {
       const { data: messagesData, error: messagesError } = await adminClient
-        .from('qa_messages')
+        .from('qaev_messages')
         .select('id, session_id, role, content, created_at')
         .in('session_id', sessionIds)
         .order('created_at', { ascending: true });
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     // Get feedbacks with optional rating filter
     let feedbackQuery = adminClient
-      .from('qa_feedback_logs')
+      .from('qaev_feedback_logs')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
 
     // Get total count for pagination
     const { count: totalSessions } = await adminClient
-      .from('qa_sessions')
+      .from('qaev_sessions')
       .select('*', { count: 'exact', head: true });
 
     return NextResponse.json({
