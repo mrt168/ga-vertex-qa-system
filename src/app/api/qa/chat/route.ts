@@ -5,6 +5,7 @@ import { getVertexSearchClient, SearchResult } from '@/lib/google/vertex-search'
 import { getGoogleDriveClient } from '@/lib/google/drive';
 import { getLocalDocumentSource } from '@/lib/documents/local-source';
 import { getGoogleDriveSource } from '@/lib/documents/google-drive-source';
+import { InterpretationService, InterpretationRule } from '@/lib/interpretation';
 
 export const runtime = 'nodejs';
 
@@ -85,9 +86,34 @@ export async function POST(request: NextRequest) {
       ? sources.map(s => `[${s.fileName}]\n${s.relevantContent}`).join('\n\n---\n\n')
       : '';
 
+    // Get interpretation rules for the documents (Interpretation Layer)
+    const interpretationService = new InterpretationService(supabase);
+    let appliedRules: InterpretationRule[] = [];
+
+    // Collect rules from all source documents
+    for (const source of sources) {
+      if (source.documentId) {
+        try {
+          const rules = await interpretationService.getApplicableRules(
+            source.documentId,
+            message
+          );
+          appliedRules = [...appliedRules, ...rules];
+        } catch (ruleError) {
+          // Failsafe: Continue without rules if fetch fails
+          console.warn('Failed to fetch interpretation rules:', ruleError);
+        }
+      }
+    }
+
+    // Remove duplicate rules (same rule might apply to multiple docs)
+    const uniqueRules = appliedRules.filter(
+      (rule, index, self) => index === self.findIndex(r => r.id === rule.id)
+    );
+
     // Generate response with Gemini via Vertex AI
     const gemini = getVertexGeminiClient();
-    const systemPrompt = buildSystemPrompt(context);
+    const systemPrompt = buildSystemPrompt(context, uniqueRules);
     const fullPrompt = `${systemPrompt}\n\nUser Question: ${message}`;
 
     const response = await gemini.generateContent({
@@ -107,6 +133,16 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
+
+    // Record interpretation rule application (for tracking and score updates)
+    if (assistantMessage && uniqueRules.length > 0) {
+      const primaryDocumentId = sources[0]?.documentId || 'unknown';
+      await interpretationService.recordApplication(
+        assistantMessage.id,
+        primaryDocumentId,
+        uniqueRules.map(r => r.id)
+      );
+    }
 
     if (assistantMsgError) {
       console.error('Failed to save assistant message:', assistantMsgError);
@@ -150,7 +186,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function buildSystemPrompt(context: string): string {
+function buildSystemPrompt(context: string, interpretationRules: InterpretationRule[] = []): string {
   const basePrompt = `あなたは社内QAアシスタントです。ナレッジベースの情報に基づいて、質問に回答してください。
 
 ## 回答ルール（必須）
@@ -177,6 +213,57 @@ function buildSystemPrompt(context: string): string {
    - 重要なポイントは太字で強調
    - 具体例や数値を含める`;
 
+  // Build interpretation guide section if rules exist
+  let interpretationGuide = '';
+  if (interpretationRules.length > 0) {
+    const rulesByType: Record<string, InterpretationRule[]> = {
+      CONTEXT: [],
+      CLARIFICATION: [],
+      FORMAT: [],
+      MISUNDERSTANDING: [],
+      RELATED: [],
+    };
+
+    for (const rule of interpretationRules) {
+      rulesByType[rule.rule_type].push(rule);
+    }
+
+    const sections: string[] = [];
+
+    if (rulesByType.CONTEXT.length > 0) {
+      sections.push(`### 補足情報・前提条件
+${rulesByType.CONTEXT.map(r => `- ${r.content}`).join('\n')}`);
+    }
+
+    if (rulesByType.CLARIFICATION.length > 0) {
+      sections.push(`### 曖昧な表現の解釈
+${rulesByType.CLARIFICATION.map(r => `- ${r.content}`).join('\n')}`);
+    }
+
+    if (rulesByType.MISUNDERSTANDING.length > 0) {
+      sections.push(`### よくある誤解（注意）
+${rulesByType.MISUNDERSTANDING.map(r => `- ${r.content}`).join('\n')}`);
+    }
+
+    if (rulesByType.FORMAT.length > 0) {
+      sections.push(`### 回答形式のガイド
+${rulesByType.FORMAT.map(r => `- ${r.content}`).join('\n')}`);
+    }
+
+    if (rulesByType.RELATED.length > 0) {
+      sections.push(`### 関連情報
+${rulesByType.RELATED.map(r => `- ${r.content}`).join('\n')}`);
+    }
+
+    if (sections.length > 0) {
+      interpretationGuide = `
+
+## 解釈ガイド（回答時に考慮してください）
+
+${sections.join('\n\n')}`;
+    }
+  }
+
   if (context) {
     return `${basePrompt}
 
@@ -184,12 +271,13 @@ function buildSystemPrompt(context: string): string {
 
 ## ナレッジベースの情報
 
-${context}
+${context}${interpretationGuide}
 
 ---
 
 上記の情報を使って、ユーザーの質問に**具体的に**回答してください。
-項目名だけでなく、その中身・詳細・実際のチェック項目を説明することが重要です。`;
+項目名だけでなく、その中身・詳細・実際のチェック項目を説明することが重要です。
+解釈ガイドがある場合は、それを考慮して回答してください。`;
   }
 
   return `${basePrompt}

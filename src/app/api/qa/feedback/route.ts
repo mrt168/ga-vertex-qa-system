@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { InterpretationService } from '@/lib/interpretation';
 
 export const runtime = 'nodejs';
 
@@ -88,6 +89,9 @@ export async function POST(request: NextRequest) {
       .eq('message_id', messageId)
       .single();
 
+    // Initialize InterpretationService for rule score updates
+    const interpretationService = new InterpretationService(supabase);
+
     if (existingFeedback) {
       // Update existing feedback
       const { data: feedback, error: updateError } = await supabase
@@ -106,6 +110,14 @@ export async function POST(request: NextRequest) {
           { error: 'Failed to update feedback' },
           { status: 500 }
         );
+      }
+
+      // Update interpretation rule scores based on feedback
+      try {
+        await interpretationService.updateRuleScores(messageId, rating);
+      } catch (ruleError) {
+        // Non-critical: log but don't fail the request
+        console.warn('Failed to update interpretation rule scores:', ruleError);
       }
 
       return NextResponse.json({ feedback });
@@ -139,6 +151,14 @@ export async function POST(request: NextRequest) {
       .from('qa_messages')
       .update({ feedback_id: feedback.id })
       .eq('id', messageId);
+
+    // Update interpretation rule scores based on feedback
+    try {
+      await interpretationService.updateRuleScores(messageId, rating);
+    } catch (ruleError) {
+      // Non-critical: log but don't fail the request
+      console.warn('Failed to update interpretation rule scores:', ruleError);
+    }
 
     // If BAD feedback, check if we should trigger evolution
     if (rating === 'BAD') {

@@ -40,28 +40,44 @@ export async function GET(request: NextRequest) {
       adminClient = supabase;
     }
 
-    // Get sessions with their messages
+    // Get sessions first (without JOIN to avoid foreign key issues)
     const { data: sessions, error: sessionsError } = await adminClient
       .from('qa_sessions')
-      .select(`
-        id,
-        title,
-        created_at,
-        updated_at,
-        qa_messages (
-          id,
-          role,
-          content,
-          created_at,
-          feedback_id
-        )
-      `)
+      .select('id, title, created_at, updated_at')
       .order('updated_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (sessionsError) {
       console.error('Failed to fetch sessions:', sessionsError);
-      return NextResponse.json({ error: 'Failed to fetch sessions' }, { status: 500 });
+      return NextResponse.json({
+        error: 'Failed to fetch sessions',
+        details: sessionsError.message
+      }, { status: 500 });
+    }
+
+    // Get messages for these sessions separately
+    const sessionIds = sessions?.map(s => s.id) || [];
+    let messages: Array<{
+      id: string;
+      session_id: string;
+      role: string;
+      content: string;
+      created_at: string;
+    }> = [];
+
+    if (sessionIds.length > 0) {
+      const { data: messagesData, error: messagesError } = await adminClient
+        .from('qa_messages')
+        .select('id, session_id, role, content, created_at')
+        .in('session_id', sessionIds)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) {
+        console.error('Failed to fetch messages:', messagesError);
+        // Continue without messages rather than failing completely
+      } else {
+        messages = messagesData || [];
+      }
     }
 
     // Get feedbacks with optional rating filter
@@ -80,7 +96,7 @@ export async function GET(request: NextRequest) {
       console.error('Failed to fetch feedbacks:', feedbackError);
     }
 
-    // Create Q&A pairs from sessions
+    // Create Q&A pairs from sessions and messages
     const qaPairs: Array<{
       id: string;
       sessionId: string;
@@ -93,23 +109,15 @@ export async function GET(request: NextRequest) {
     }> = [];
 
     for (const session of sessions || []) {
-      const messages = (session.qa_messages as Array<{
-        id: string;
-        role: string;
-        content: string;
-        created_at: string;
-        feedback_id: string | null;
-      }>) || [];
-
-      // Sort messages by created_at
-      messages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      // Get messages for this session
+      const sessionMessages = messages.filter(m => m.session_id === session.id);
 
       // Pair user messages with assistant responses
-      for (let i = 0; i < messages.length; i++) {
-        const msg = messages[i];
+      for (let i = 0; i < sessionMessages.length; i++) {
+        const msg = sessionMessages[i];
         if (msg.role === 'user') {
           // Find the next assistant message
-          const assistantMsg = messages.find(
+          const assistantMsg = sessionMessages.find(
             (m, idx) => idx > i && m.role === 'assistant'
           );
 
@@ -152,6 +160,12 @@ export async function GET(request: NextRequest) {
         total: totalSessions || 0,
         offset,
         limit,
+      },
+      debug: {
+        sessionsCount: sessions?.length || 0,
+        messagesCount: messages.length,
+        feedbacksCount: feedbacks?.length || 0,
+        qaPairsCount: qaPairs.length,
       },
     });
   } catch (error) {

@@ -25,7 +25,16 @@ export async function GET() {
     if (error) {
       console.error('Failed to fetch sessions:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch sessions' },
+        {
+          error: 'Failed to fetch sessions',
+          supabaseError: {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+          },
+          userId: user.id,
+        },
         { status: 500 }
       );
     }
